@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct MovieResponse: Codable {
+public struct MoviesResponse: Codable {
   public let page: Int
   public let totalResults: Int
   public let totalPages: Int
@@ -17,10 +17,11 @@ public struct MovieResponse: Codable {
 
 public struct Movie: Codable, Equatable, Hashable {
   public let id: Int
+  public let title: String
   public let backdropPath: String?
   public let posterPath: String?
   public let overview: String
-  public let releaseDate: Data
+  public let releaseDate: Date
   public let voteAverage: Double
   public let voteCount: Int
   public let tagline: String?
@@ -29,8 +30,13 @@ public struct Movie: Codable, Equatable, Hashable {
   public let credits: MovieCreditResponse?
   public let adult: Bool
   public let runtime: Int?
+  
   public var posterURL: URL {
-    return URL(string: "https://image.tmdb.org/t/p/q500\(posterPath ?? "")")!
+    return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath ?? "")")!
+  }
+  
+  public var backdropURL: URL {
+    return URL(string: "https://image.tmdb.org/t/p/original\(backdropPath ?? "")")!
   }
   
   public var voteAveragePercentText: String {
@@ -95,4 +101,6 @@ public struct MovieCrew: Codable {
   public let job: String
   public let name: String
 }
+
+
 
