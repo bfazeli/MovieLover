@@ -11,8 +11,8 @@ import Combine
 
 protocol MovieService {
   func fetchMovies(from endpoint: Endpoint) -> Future<[Movie], MovieStoreAPIError>
+  func searchMovies(query: String) -> Future<[Movie], MovieStoreAPIError>
 //  func fetchMovie(with id: Int) -> Future<Movie, MovieStoreAPIError>
-//  func searchMovie(query: String, params: [String: String]?) -> Future<[Movie], MovieStoreAPIError>
 }
 
 public enum Endpoint: String, CustomStringConvertible, CaseIterable {

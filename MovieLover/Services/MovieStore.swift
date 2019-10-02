@@ -28,6 +28,41 @@ public class MovieStore: MovieService {
     return jsonDecoder
   }()
   
+  func searchMovies(query: String) -> Future<[Movie], MovieStoreAPIError> {
+    return Future<[Movie], MovieStoreAPIError> { [unowned self] promise in
+      guard let url = self.generateURL(with: .search, and: ["query":query, "page":"1"]) else {
+        return promise(.failure(.urlError(URLError(URLError.unsupportedURL))))
+      }
+      print(url.absoluteString)
+      self.urlSession.dataTaskPublisher(for: url)
+        .tryMap { (data, response) -> Data in
+          guard let httpResponse = response as? HTTPURLResponse,
+            200...299 ~= httpResponse.statusCode else {
+              throw MovieStoreAPIError.responseError((response as? HTTPURLResponse)?.statusCode ?? 500)
+          }
+          print(response)
+          return  data
+      }
+      .decode(type: MoviesResponse.self, decoder: self.jsonDecoder)
+      .receive(on: RunLoop.main)
+      .sink(receiveCompletion: { (completion) in
+        if case let .failure(error) = completion {
+          switch error {
+          case let urlError as URLError:
+            promise(.failure(.urlError(urlError)))
+          case let decodingError as DecodingError:
+            promise(.failure(.decodingError(decodingError)))
+          case let apiError as MovieStoreAPIError:
+            promise(.failure(apiError))
+          default:
+            promise(.failure(.genericError))
+          }
+        }
+      }, receiveValue: {promise(.success($0.results))})
+        .store(in: &self.subscriptions)
+    }
+  }
+  
   func fetchMovies(from endpoint: Endpoint) -> Future<[Movie], MovieStoreAPIError> {
     // Init and returning a future of movies
     return Future<[Movie], MovieStoreAPIError> { [unowned self] promise in
@@ -38,8 +73,7 @@ public class MovieStore: MovieService {
       // Using URLSession Datatask Publisher to fetch data from URL
       self.urlSession.dataTaskPublisher(for: url)
         .tryMap { (data, response) -> Data in   // Trymap to chain publishers (transforming publishers)
-          guard let httpResponse =
-            response as? HTTPURLResponse,
+          guard let httpResponse = response as? HTTPURLResponse,
             200...299 ~= httpResponse.statusCode else {
               throw MovieStoreAPIError.responseError((response as? HTTPURLResponse)?.statusCode ?? 500)
           }
@@ -49,7 +83,6 @@ public class MovieStore: MovieService {
         .decode(type: MoviesResponse.self, decoder: self.jsonDecoder)    // Decode data into model
         .receive(on: RunLoop.main)  // scheduling recieved values from publisher to run on main
         .sink(receiveCompletion: { (completion) in  // Subscribed to published through sink
-          print("errorrrrr")
           if case let .failure(error) = completion {  // Invoked after publisher finishes publishing a val
             switch error {
             case let urlError as URLError:
@@ -67,13 +100,29 @@ public class MovieStore: MovieService {
     }
   }
   
-  func generateURL(with endpoint: Endpoint) -> URL? {
-    guard let urlComponents = NSURLComponents(string: "\(baseAPIURL)/movie/\(endpoint.rawValue)")
-      else { return nil}
+  func generateURL(with endpoint: Endpoint, and queryParams: [String:String]? = nil) -> URL? {
     
-    let queryItems = [URLQueryItem(name: "api_key", value: apiKey)]
+    guard let urlComponents = generateComponent(with: endpoint)
+      else { return nil }
+    
+    var queryItems = [URLQueryItem(name: "api_key", value: apiKey)]
+    if let items = queryParams {
+      for (key, val) in items {
+        queryItems.append(URLQueryItem(name: key, value: val))
+      }
+    }
+    
     urlComponents.queryItems = queryItems
     
     return urlComponents.url
+  }
+  
+  func generateComponent(with endpoint: Endpoint) -> NSURLComponents? {
+    switch endpoint {
+    case .search:
+      return NSURLComponents(string: "\(baseAPIURL)/search/movie")
+    default:
+      return NSURLComponents(string: "\(baseAPIURL)/movie/\(endpoint.rawValue)")
+    }
   }
 }

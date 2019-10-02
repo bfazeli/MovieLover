@@ -20,31 +20,35 @@ public struct Movie: Codable, Equatable, Hashable {
   public let title: String
   public let backdropPath: String?
   public let posterPath: String?
-  public let overview: String
-  public let releaseDate: Date
-  public let voteAverage: Double
-  public let voteCount: Int
+  public let overview: String?
+  public let releaseDate: Date?
+  public let voteAverage: Double?
+  public let voteCount: Int?
   public let tagline: String?
   public let genres: [MovieGenre]?
   public let videos: MovieVideoResponse?
   public let credits: MovieCreditResponse?
-  public let adult: Bool
+  public let adult: Bool?
   public let runtime: Int?
   
-  public var posterURL: URL {
+  public var posterURL: URL? {
     return URL(string: "https://image.tmdb.org/t/p/w500\(posterPath ?? "")")!
   }
   
-  public var backdropURL: URL {
+  public var backdropURL: URL? {
     return URL(string: "https://image.tmdb.org/t/p/original\(backdropPath ?? "")")!
   }
   
   public var voteAveragePercentText: String {
-    return "\(Int(voteAverage * 10))%"
+    guard let voteAvg = voteAverage else {
+      return "N/A"
+    }
+    return "\(Int(voteAvg * 10))%"
   }
   
   public var ratingText: String {
-    let rating = Int(voteAverage)
+    guard let voteAvg = voteAverage else { return "N/A" }
+    let rating = Int(voteAvg)
     let ratingText = (0..<rating).reduce("") { (accumulator, _) -> String in
       return accumulator + "⭐️"
     }
@@ -62,20 +66,20 @@ public struct Movie: Codable, Equatable, Hashable {
 }
 
 public struct MovieGenre: Codable {
-  public let results: [MovieVideo]
+  public let results: [MovieVideo]?
 }
 
 public struct MovieVideoResponse: Codable {
-  public let results: [MovieVideo]
+  public let results: [MovieVideo]?
 }
 
 public struct MovieVideo: Codable {
   public let id: String
-  public let key: String
-  public let name: String
-  public let site: String
-  public let size: Int
-  public let type: String
+  public let key: String?
+  public let name: String?
+  public let site: String?
+  public let size: Int?
+  public let type: String?
   
   public var youtubeURL: URL? {
     guard site == "YouTube" else {
@@ -86,20 +90,20 @@ public struct MovieVideo: Codable {
 }
 
 public struct MovieCreditResponse: Codable {
-  public let cast: [MovieCast]
-  public let crew: [MovieCrew]
+  public let cast: [MovieCast]?
+  public let crew: [MovieCrew]?
 }
 
 public struct MovieCast: Codable {
-  public let character: String
-  public let name: String
+  public let character: String?
+  public let name: String?
 }
 
 public struct MovieCrew: Codable {
   public let id: Int
-  public let department: String
-  public let job: String
-  public let name: String
+  public let department: String?
+  public let job: String?
+  public let name: String?
 }
 
 

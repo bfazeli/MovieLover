@@ -20,7 +20,7 @@ fileprivate enum Section {
 class MainViewController: UITableViewController {
   
   let searchController: UISearchController = UISearchController(searchResultsController: nil)
-  var subscriber: Any?
+//  var subscriber: Any?
   
   fileprivate var diffableDataSource: UITableViewDiffableDataSource<Section, Movie>!
   private var subscriptions = Set<AnyCancellable>()
@@ -37,32 +37,37 @@ class MainViewController: UITableViewController {
     
     searchController.obscuresBackgroundDuringPresentation = false
     
-    //
-    title = "Combine X API Fetch"
     setupTableView()
     fetchMovies()
-    //
   }
   
   fileprivate func setupSearchBarListeners() {
     let publisher = NotificationCenter.default.publisher(for: UISearchTextField.textDidChangeNotification, object: searchController.searchBar.searchTextField)
     
-    subscriber = publisher.map {
+    _ = publisher.map {
       ($0.object as! UISearchTextField).text
     }
-    .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
+    .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
+    .removeDuplicates()
     .sink {
-      guard let queryText = $0 else { return }
-      self.searchMovies(query: queryText)
+      guard let searchText = $0 else { return }
+      let trimmedText = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard let _ = trimmedText.first else { return }
+    
+      self.searchMovies(query: trimmedText)
     }
-//    subscriber = publisher.sink {
-//      guard let searchTextField = $0.object as? UISearchTextField else { return }
-//      print(searchTextField.text)
-//    }
   }
   
   private func searchMovies(query: String) {
-    
+    self.movieAPI.searchMovies(query: query)
+      .sink(receiveCompletion: { [unowned self](completion) in
+        if case let .failure(error) = completion {
+          self.handleError(apiError: error)
+        }
+        }, receiveValue: {[unowned self] (result) in
+          self.generateSnapshot(with: result)
+        })
+      .store(in: &self.subscriptions)
   }
   
   private func fetchMovies() {
